@@ -1,7 +1,7 @@
 # Selenium: automation of browser
 from selenium import webdriver
 # from webdriver_manager.chrome import ChromeDriverManager
-import undetected_chromedriver.v2 as uc
+import undetected_chromedriver as uc
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
@@ -47,6 +47,7 @@ class Session:
         }
 
         start_session = time.time()
+        self.started = None
 
         # this function will run when the session ends
         @atexit.register
