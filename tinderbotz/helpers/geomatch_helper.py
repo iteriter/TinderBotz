@@ -78,7 +78,7 @@ class GeomatchHelper:
 
             #    action = ActionChains(self.browser)
             #    action.drag_and_drop_by_offset(card, -200, 0).perform()
-            
+
             action = ActionChains(self.browser)
             action.send_keys(Keys.ARROW_LEFT).perform()
 
@@ -288,7 +288,7 @@ class GeomatchHelper:
             sections = self.browser.find_elements(By.CSS_SELECTOR, "div[class='Px(16px) Py(12px)']")
             for section in sections:
                 headline = section.find_element(By.TAG_NAME, "h2").text.lower()
-                
+
                 if headline in infoItems.keys():
                     infoElements = section.find_elements(By.CSS_SELECTOR, "div[class^='Bdrs(100px)']")
                     for infoElement in infoElements:
@@ -301,7 +301,8 @@ class GeomatchHelper:
                         "artist": artist
                     }
                 else:
-                    print("Unknown Sect Headline:", headline)
+                    pass
+                    # print("Unknown Sect Headline:", headline)
 
 
             #if ('Passions' in passions_el.find_element(By.TAG_NAME, "h2").text):
@@ -320,17 +321,6 @@ class GeomatchHelper:
 
         image_urls = []
 
-        # only get url of first few images, and not click all bullets to get all image
-        elements = self.browser.find_elements(By.XPATH, "//div[@aria-label='Profile slider']")
-        for element in elements:
-            image_url = element.value_of_css_property('background-image').split('\"')[1]
-            if image_url not in image_urls:
-                image_urls.append(image_url)
-
-        # return image urls without opening all images
-        if quickload:
-            return image_urls
-
         try:
             # There are no bullets when there is only 1 image
             classname = 'bullet'
@@ -339,33 +329,30 @@ class GeomatchHelper:
             WebDriverWait(self.browser, self.delay).until(EC.presence_of_element_located(
                 (By.CLASS_NAME, classname)))
 
-            image_btns = self.browser.find_elements_by_class_name(classname)
+            image_btns = self.browser.find_elements(By.CLASS_NAME, classname)
 
             for btn in image_btns:
                 btn.click()
                 time.sleep(1)
 
-                elements = self.browser.find_elements(By.XPATH, "//div[@aria-label='Profile slider']")
+                elements = self.browser.find_elements(By.XPATH, "//div[contains(@class, 'profileCard__slider')]//div[contains(@class, 'profileCard__slider__img')]")
                 for element in elements:
-                    image_url = element.value_of_css_property('background-image').split('\"')[1]
-                    if image_url not in image_urls:
+                    image_url = element.value_of_css_property('background-image')
+                    if image_url != 'none' and image_url not in image_urls:
                         image_urls.append(image_url)
 
-        except StaleElementReferenceException:
-            pass
-
+                        if quickload:
+                            return image_urls
         except TimeoutException:
             # there is only 1 image, so no bullets to iterate through
             try:
-                element = self.browser.find_element(By.XPATH, "//div[@aria-label='Profile slider']")
-                image_url = element.value_of_css_property('background-image').split('\"')[1]
-                if image_url not in image_urls:
-                    image_urls.append(image_url)
-
+                self.browser.find_element(By.XPATH, "//div[contains(@class, 'profileCard__slider')]//div[contains(@class, 'profileCard__slider__img')]")
+                image_url = element.value_of_css_property('background-image')
             except Exception as e:
                 print("unhandled Exception when trying to store their only image")
                 print(e)
-
+        except StaleElementReferenceException:
+            pass
         except Exception as e:
             print("unhandled exception getImageUrls in geomatch_helper")
             print(e)
