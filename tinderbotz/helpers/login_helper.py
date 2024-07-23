@@ -1,10 +1,17 @@
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import TimeoutException, ElementClickInterceptedException, StaleElementReferenceException, NoSuchElementException
+from selenium.common.exceptions import (
+    TimeoutException,
+    ElementClickInterceptedException,
+    StaleElementReferenceException,
+    NoSuchElementException,
+)
 from selenium.webdriver.common.keys import Keys
 from tinderbotz.helpers.xpaths import content
 import time
+from loguru import logger
+
 
 class LoginHelper:
 
@@ -16,9 +23,10 @@ class LoginHelper:
 
     def _click_login_button(self):
         try:
-            xpath = f'{content}/div/div[1]/div/main/div[1]/div/div/div/div/header/div/div[2]/div[2]/a'
-            WebDriverWait(self.browser, self.delay).until(EC.presence_of_element_located(
-                (By.XPATH, xpath)))
+            xpath = f"{content}/div/div[1]/div/main//a[contains(@href,'onelink')]"
+            WebDriverWait(self.browser, self.delay).until(
+                EC.presence_of_element_located((By.XPATH, xpath))
+            )
             button = self.browser.find_element(By.XPATH, xpath)
             button.click()
             time.sleep(3)
@@ -35,8 +43,9 @@ class LoginHelper:
         # wait for google button to appear
         xpath = '//*[@aria-label="Log in with Google"]'
         try:
-            WebDriverWait(self.browser, self.delay).until(EC.presence_of_element_located(
-                (By.XPATH, xpath)))
+            WebDriverWait(self.browser, self.delay).until(
+                EC.presence_of_element_located((By.XPATH, xpath))
+            )
 
             self.browser.find_element(By.XPATH, xpath).click()
 
@@ -55,7 +64,8 @@ class LoginHelper:
         try:
             xpath = "//input[@type='email']"
             WebDriverWait(self.browser, self.delay).until(
-                EC.presence_of_element_located((By.XPATH, xpath)))
+                EC.presence_of_element_located((By.XPATH, xpath))
+            )
 
             emailfield = self.browser.find_element(By.XPATH, xpath)
             emailfield.send_keys(email)
@@ -68,7 +78,8 @@ class LoginHelper:
         try:
             xpath = "//input[@type='password']"
             WebDriverWait(self.browser, self.delay).until(
-                EC.presence_of_element_located((By.XPATH, xpath)))
+                EC.presence_of_element_located((By.XPATH, xpath))
+            )
 
             pwdfield = self.browser.find_element(By.XPATH, xpath)
             pwdfield.send_keys(password)
@@ -86,8 +97,9 @@ class LoginHelper:
         # wait for facebook button to appear
         xpath = '//*[@aria-label="Log in with Facebook"]'
         try:
-            WebDriverWait(self.browser, self.delay).until(EC.presence_of_element_located(
-                (By.XPATH, xpath)))
+            WebDriverWait(self.browser, self.delay).until(
+                EC.presence_of_element_located((By.XPATH, xpath))
+            )
 
             self.browser.find_element(By.XPATH, xpath).click()
         except TimeoutException:
@@ -106,7 +118,8 @@ class LoginHelper:
             xpath_cookies = '//*[@data-cookiebanner="accept_button"]'
 
             WebDriverWait(self.browser, self.delay).until(
-            EC.presence_of_element_located((By.XPATH, xpath_cookies)))
+                EC.presence_of_element_located((By.XPATH, xpath_cookies))
+            )
 
             self.browser.find_element(By.XPATH, xpath_cookies).click()
         except TimeoutException:
@@ -119,7 +132,8 @@ class LoginHelper:
             xpath_button = '//*[@id="loginbutton"]'
 
             WebDriverWait(self.browser, self.delay).until(
-                EC.presence_of_element_located((By.XPATH, xpath_email)))
+                EC.presence_of_element_located((By.XPATH, xpath_email))
+            )
 
             emailfield = self.browser.find_element(By.XPATH, xpath_email)
             emailfield.send_keys(email)
@@ -137,13 +151,15 @@ class LoginHelper:
         self._handle_popups()
 
     def login_by_sms(self, country, phone_number):
+        logger.debug("Logging in by sms")
         self._click_login_button()
 
         # wait for facebook button to appear
         try:
             xpath = '//*[@aria-label="Log in with phone number"]'
-            WebDriverWait(self.browser, self.delay).until(EC.presence_of_element_located(
-                (By.XPATH, xpath)))
+            WebDriverWait(self.browser, self.delay).until(
+                EC.presence_of_element_located((By.XPATH, xpath))
+            )
 
             btn = self.browser.find_element(By.XPATH, xpath)
             btn.click()
@@ -155,8 +171,9 @@ class LoginHelper:
         # Fill in sms
         try:
             xpath = '//*[@name="phone_number"]'
-            WebDriverWait(self.browser, self.delay).until(EC.presence_of_element_located(
-                    (By.XPATH, xpath)))
+            WebDriverWait(self.browser, self.delay).until(
+                EC.presence_of_element_located((By.XPATH, xpath))
+            )
 
             field = self.browser.find_element(By.XPATH, xpath)
             field.send_keys(phone_number)
@@ -170,21 +187,22 @@ class LoginHelper:
         while not self._is_logged_in():
             time.sleep(1)
 
-        self._handle_popups()
+        # self._handle_popups()
 
     def _handle_prefix(self, country):
         self._accept_cookies()
 
         xpath = '//div[@aria-describedby="phoneErrorMessage"]/div/div'
-        WebDriverWait(self.browser, self.delay).until(EC.presence_of_element_located(
-            (By.XPATH, xpath)))
+        WebDriverWait(self.browser, self.delay).until(
+            EC.presence_of_element_located((By.XPATH, xpath))
+        )
         btn = self.browser.find_element(By.XPATH, xpath)
         btn.click()
 
-        els = self.browser.find_elements(By.XPATH, '//div')
+        els = self.browser.find_elements(By.XPATH, "//div")
         for el in els:
             try:
-                span = el.find_element(By.XPATH, './/span')
+                span = el.find_element(By.XPATH, ".//span")
                 if span.text.lower() == country.lower():
                     print("clicked")
                     el.click()
@@ -196,7 +214,7 @@ class LoginHelper:
 
     # checks if user is logged in by checking the url
     def _is_logged_in(self):
-        return 'app' in self.browser.current_url
+        return "app" in self.browser.current_url
 
     def _handle_popups(self):
         for _ in range(20):
@@ -206,21 +224,21 @@ class LoginHelper:
                 break
 
         if not self._is_logged_in():
-            print('Still not logged in ... ?')
-            input('Proceed manually and press ENTER to continue\n')
+            print("Still not logged in ... ?")
+            input("Proceed manually and press ENTER to continue\n")
 
         time.sleep(2)
         self._accept_cookies()
         self._accept_location_notification()
         self._deny_overlayed_notifications()
 
-        #self.browser.execute_cdp_cmd(
+        # self.browser.execute_cdp_cmd(
         #    "Browser.grantPermissions",
         #    {
         #        "origin": "https://www.tinder.com",
         #        "permissions": ["geolocation"]
         #    },
-        #)
+        # )
 
         time.sleep(5)
 
@@ -228,14 +246,16 @@ class LoginHelper:
         try:
             xpath = '//*[@data-testid="allow"]'
             WebDriverWait(self.browser, self.delay).until(
-                EC.presence_of_element_located((By.XPATH, xpath)))
+                EC.presence_of_element_located((By.XPATH, xpath))
+            )
 
             locationBtn = self.browser.find_element(By.XPATH, xpath)
             locationBtn.click()
             print("ACCEPTED LOCATION.")
         except TimeoutException:
             print(
-                "ACCEPTING LOCATION: Loading took too much time! Element probably not presented, so we continue.")
+                "ACCEPTING LOCATION: Loading took too much time! Element probably not presented, so we continue."
+            )
         except:
             pass
 
@@ -243,27 +263,30 @@ class LoginHelper:
         try:
             xpath = '//*[@data-testid="decline"]'
             WebDriverWait(self.browser, self.delay).until(
-                EC.presence_of_element_located((By.XPATH, xpath)))
+                EC.presence_of_element_located((By.XPATH, xpath))
+            )
 
             self.browser.find_element(By.XPATH, xpath).click()
             print("DENIED NOTIFICATIONS.")
         except TimeoutException:
             print(
-                "DENYING NOTIFICATIONS: Loading took too much time! Element probably not presented, so we continue.")
+                "DENYING NOTIFICATIONS: Loading took too much time! Element probably not presented, so we continue."
+            )
         except:
             pass
 
     def _accept_cookies(self):
         try:
             xpath = '//*[@type="button"]'
-            WebDriverWait(self.browser, self.delay).until(EC.presence_of_element_located(
-                (By.XPATH, xpath)))
+            WebDriverWait(self.browser, self.delay).until(
+                EC.presence_of_element_located((By.XPATH, xpath))
+            )
             buttons = self.browser.find_elements(By.XPATH, xpath)
 
             for button in buttons:
                 try:
-                    text_span = button.find_element(By.XPATH, './/span').text
-                    if 'accept' in text_span.lower():
+                    text_span = button.find_element(By.XPATH, ".//span").text
+                    if "accept" in text_span.lower():
                         button.click()
                         print("COOKIES ACCEPTED.")
                         break
@@ -272,7 +295,8 @@ class LoginHelper:
 
         except TimeoutException:
             print(
-                "ACCEPTING COOKIES: Loading took too much time! Element probably not presented, so we continue.")
+                "ACCEPTING COOKIES: Loading took too much time! Element probably not presented, so we continue."
+            )
         except Exception as e:
             print("Error cookies", e)
             pass
@@ -318,6 +342,8 @@ class LoginHelper:
         self.browser.switch_to.window(main_window)
 
     def _exit_by_time_out(self):
-        print("Loading an element took too much time!. Please check your internet connection.")
+        print(
+            "Loading an element took too much time!. Please check your internet connection."
+        )
         print("Alternatively, you can add a sleep or higher the delay class variable.")
         exit(1)

@@ -1,12 +1,19 @@
 # Selenium: automation of browser
+import datetime
 from selenium import webdriver
+
 # from webdriver_manager.chrome import ChromeDriverManager
 import undetected_chromedriver as uc
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, ElementNotVisibleException
+from selenium.common.exceptions import (
+    NoSuchElementException,
+    TimeoutException,
+    ElementNotVisibleException,
+)
 from selenium.webdriver.common.by import By
+from loguru import logger
 
 
 # some other imports :-)
@@ -19,6 +26,7 @@ import atexit
 from pathlib import Path
 
 # Tinderbotz: helper classes
+from timer import catchtime
 from tinderbotz.helpers.geomatch import Geomatch
 from tinderbotz.helpers.match import Match
 from tinderbotz.helpers.profile_helper import ProfileHelper
@@ -39,21 +47,15 @@ class Session:
     def __init__(self, headless=False, store_session=True, proxy=None, user_data=False):
         self.email = None
         self.may_send_email = False
-        self.session_data = {
-            "duration": 0,
-            "like": 0,
-            "dislike": 0,
-            "superlike": 0
-        }
+        self.session_data = {"duration": 0, "like": 0, "dislike": 0, "superlike": 0}
 
-        start_session = time.time()
-        self.started = None
+        self.started = datetime.datetime.now()
 
         # this function will run when the session ends
         @atexit.register
         def cleanup():
             # End session duration
-            seconds = int(time.time() - start_session)
+            seconds = (datetime.datetime.now() - self.started).seconds
             self.session_data["duration"] = seconds
 
             # add session data into a list of messages
@@ -67,10 +69,14 @@ class Session:
                 box = self._get_msg_box(lines=lines, title="Tinderbotz")
                 print(box)
             finally:
-                print("Started session: {}".format(self.started))
+                print(
+                    "Started session: {}".format(
+                        self.started.strftime("%Y-%m-%d %H:%M:%S")
+                    )
+                )
                 y = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                 print("Ended session: {}".format(y))
-            
+
             # Close browser properly
             self.browser.quit()
 
@@ -86,45 +92,50 @@ class Session:
             if not os.path.isdir(user_data):
                 os.mkdir(user_data)
 
-            Path(f'{user_data}First Run').touch()
+            Path(f"{user_data}First Run").touch()
             options.add_argument(f"--user-data-dir={user_data}")
 
-        #options.add_argument("--start-maximized")
-        options.add_argument('--no-first-run --no-service-autorun --password-store=basic')
+        # options.add_argument("--start-maximized")
+        options.add_argument(
+            "--no-first-run --no-service-autorun --password-store=basic"
+        )
         options.add_argument("--lang=en-GB")
 
         if headless:
             options.headless = True
 
         if proxy:
-            if '@' in proxy:
-                parts = proxy.split('@')
+            if "@" in proxy:
+                parts = proxy.split("@")
 
-                user = parts[0].split(':')[0]
-                pwd = parts[0].split(':')[1]
+                user = parts[0].split(":")[0]
+                pwd = parts[0].split(":")[1]
 
-                host = parts[1].split(':')[0]
-                port = parts[1].split(':')[1]
+                host = parts[1].split(":")[0]
+                port = parts[1].split(":")[1]
 
-                extension = get_proxy_extension(PROXY_HOST=host, PROXY_PORT=port, PROXY_USER=user, PROXY_PASS=pwd)
+                extension = get_proxy_extension(
+                    PROXY_HOST=host, PROXY_PORT=port, PROXY_USER=user, PROXY_PASS=pwd
+                )
                 options.add_extension(extension)
             else:
-                options.add_argument(f'--proxy-server=http://{proxy}')
+                options.add_argument(f"--proxy-server=http://{proxy}")
 
         # Getting the chromedriver from cache or download it from internet
         print("Getting ChromeDriver ...")
-        self.browser = uc.Chrome(options=options)  # ChromeDriverManager().install(),
+        self.browser = uc.Chrome(
+            options=options, enable_cdp_events=True
+        )  # ChromeDriverManager().install(),
         # self.browser = webdriver.Chrome(options=options)
         # self.browser.set_window_size(1250, 750)
 
         # clear the console based on the operating system you're using
-        #os.system('cls' if os.name == 'nt' else 'clear')
+        # os.system('cls' if os.name == 'nt' else 'clear')
 
         # Cool banner
         print(Printouts.BANNER.value)
         time.sleep(1)
 
-        self.started = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         print("Started session: {}\n\n".format(self.started))
 
     # Setting a custom location
@@ -133,7 +144,7 @@ class Session:
         params = {
             "latitude": latitude,
             "longitude": longitude,
-            "accuracy": int(accuracy.split('%')[0])
+            "accuracy": int(accuracy.split("%")[0]),
         }
 
         self.browser.execute_cdp_cmd("Page.setGeolocationOverride", params)
@@ -175,8 +186,8 @@ class Session:
             helper.login_by_google(email, password)
             time.sleep(5)
         if not self._is_logged_in():
-            print('Manual interference is required.')
-            input('press ENTER to continue')
+            print("Manual interference is required.")
+            input("press ENTER to continue")
 
     def login_using_facebook(self, email, password):
         self.email = email
@@ -185,23 +196,25 @@ class Session:
             helper.login_by_facebook(email, password)
             time.sleep(5)
         if not self._is_logged_in():
-            print('Manual interference is required.')
-            input('press ENTER to continue')
+            print("Manual interference is required.")
+            input("press ENTER to continue")
 
     def login_using_sms(self, country, phone_number):
-        if not self._is_logged_in():
+        logged_in = self._is_logged_in()
+        if not logged_in:
+            logger.debug("login_using_sms")
             helper = LoginHelper(browser=self.browser)
             helper.login_by_sms(country, phone_number)
             time.sleep(5)
         if not self._is_logged_in():
-            print('Manual interference is required.')
-            input('press ENTER to continue')
+            print("Manual interference is required.")
+            input("press ENTER to continue")
 
     def store_local(self, match):
         if isinstance(match, Match):
-            filename = 'matches'
+            filename = "matches"
         elif isinstance(match, Geomatch):
-            filename = 'geomatches'
+            filename = "geomatches"
         else:
             print("type of match is unknown, storing local impossible")
             print("Crashing in 3.2.1... :)")
@@ -209,16 +222,20 @@ class Session:
 
         # store its images
         for url in match.image_urls:
-            hashed_image = StorageHelper.store_image_as(url=url, directory='data/{}/images'.format(filename))
+            hashed_image = StorageHelper.store_image_as(
+                url=url, directory="data/{}/images".format(filename)
+            )
             match.images_by_hashes.append(hashed_image)
 
         # store its userdata
-        StorageHelper.store_match(match=match, directory='data/{}'.format(filename), filename=filename)
+        StorageHelper.store_match(
+            match=match, directory="data/{}".format(filename), filename=filename
+        )
 
-    def like(self, amount=1, ratio='100%', sleep=1, randomize_sleep = True):
-        
+    def like(self, amount=1, ratio="100%", sleep=1, randomize_sleep=True):
+
         initial_sleep = sleep
-        ratio = float(ratio.split('%')[0]) / 100
+        ratio = float(ratio.split("%")[0]) / 100
 
         if self._is_logged_in():
             helper = GeomatchHelper(browser=self.browser)
@@ -234,14 +251,14 @@ class Session:
                     if helper.like():
                         amount_liked += 1
                         # update for stats after session ended
-                        self.session_data['like'] += 1
+                        self.session_data["like"] += 1
                         print(f"{amount_liked}/{amount} liked, sleep: {sleep}")
                 else:
                     helper.dislike()
                     # update for stats after session ended
-                    self.session_data['dislike'] += 1
+                    self.session_data["dislike"] += 1
 
-                #self._handle_potential_popups()
+                # self._handle_potential_popups()
                 time.sleep(sleep)
 
             self._print_liked_stats()
@@ -254,8 +271,8 @@ class Session:
                 helper.dislike()
 
                 # update for stats after session ended
-                self.session_data['dislike'] += 1
-                #time.sleep(1)
+                self.session_data["dislike"] += 1
+                # time.sleep(1)
             self._print_liked_stats()
 
     def superlike(self, amount=1):
@@ -265,38 +282,61 @@ class Session:
                 self._handle_potential_popups()
                 helper.superlike()
                 # update for stats after session ended
-                self.session_data['superlike'] += 1
+                self.session_data["superlike"] += 1
                 time.sleep(1)
             self._print_liked_stats()
 
-    def get_geomatch(self, quickload=True):
-        if self._is_logged_in():
-            helper = GeomatchHelper(browser=self.browser)
-            self._handle_potential_popups()
+    def get_geomatch(self, quickload=True, get_full_info=False):
+        if not self._is_logged_in():
+            return
 
-            name = None
-            attempts = 0
-            max_attempts = 3
+        helper = GeomatchHelper(browser=self.browser)
+        profile_kwargs = {}
+
+        # self._handle_potential_popups() # Popup handling on first geomatch
+        # logger.trace("popups took", time.time() - start_time)
+
+        name = None
+        attempts = 1
+        max_attempts = 3
+
+        with catchtime("getting name"):
             while not name and attempts < max_attempts:
+                with logger.catch():
+                    name = helper.get_name()
+
+                if name:
+                    break
+
                 attempts += 1
-                name = helper.get_name()
-                self._handle_potential_popups() # Popup handling on first geomatch
                 time.sleep(1)
 
-            age = helper.get_age()
-
-            bio, passions, lifestyle, basics, anthem, looking_for = helper.get_bio_and_passions()
+        with catchtime("getting images"):
             image_urls = helper.get_image_urls(quickload)
-            instagram = helper.get_insta(bio)
-            rowdata = helper.get_row_data()
-            work = rowdata.get('work')
-            study = rowdata.get('study')
-            home = rowdata.get('home')
-            distance = rowdata.get('distance')
-            gender = rowdata.get('gender')
 
-            return Geomatch(name=name, age=age, work=work, gender=gender, study=study, home=home, distance=distance,
-                            bio=bio, passions=passions, lifestyle=lifestyle, basics=basics, anthem=anthem, looking_for=looking_for, image_urls=image_urls, instagram=instagram)
+        if get_full_info:
+            with catchtime("getting age & bio"):
+                profile_kwargs["age"] = helper.get_age()
+
+                (
+                    profile_kwargs["bio"],
+                    profile_kwargs["passions"],
+                    profile_kwargs["lifestyle"],
+                    profile_kwargs["basics"],
+                    profile_kwargs["anthem"],
+                    profile_kwargs["looking_for"],
+                ) = helper.get_bio_and_passions()
+                profile_kwargs["instagram"] = helper.get_insta(profile_kwargs["bio"])
+
+            with catchtime("getting age & bio"):
+                rowdata = helper.get_row_data()
+                profile_kwargs["work"] = rowdata.get("work")
+                profile_kwargs["study"] = rowdata.get("study")
+                profile_kwargs["home"] = rowdata.get("home")
+                profile_kwargs["distance"] = rowdata.get("distance")
+                profile_kwargs["gender"] = rowdata.get("gender")
+
+        return Geomatch(name=name, image_urls=image_urls, **profile_kwargs)
 
     def get_chat_ids(self, new=True, messaged=True):
         if self._is_logged_in():
@@ -355,9 +395,10 @@ class Session:
 
         # try to deny see who liked you
         try:
-            xpath = './/main/div/div/div[3]/button[2]'
+            xpath = ".//main/div/div/div[3]/button[2]"
             WebDriverWait(base_element, delay).until(
-                EC.presence_of_element_located((By.XPATH, xpath)))
+                EC.presence_of_element_located((By.XPATH, xpath))
+            )
 
             deny_btn = base_element.find_element(By.XPATH, xpath)
             deny_btn.click()
@@ -371,7 +412,7 @@ class Session:
         # Try to dismiss a potential 'upgrade like' popup
         try:
             # locate "no thanks"-button
-            xpath = './/main/div/button[2]'
+            xpath = ".//main/div/button[2]"
             base_element.find_element(By.XPATH, xpath).click()
             return "POPUP: Denied upgrade to superlike"
         except NoSuchElementException:
@@ -379,7 +420,7 @@ class Session:
 
         # try to deny 'add tinder to homescreen'
         try:
-            xpath = './/main/div/div[2]/button[2]'
+            xpath = ".//main/div/div[2]/button[2]"
 
             add_to_home_popup = base_element.find_element(By.XPATH, xpath)
             add_to_home_popup.click()
@@ -390,7 +431,7 @@ class Session:
 
         # deny buying more superlikes
         try:
-            xpath = './/main/div/div[3]/button[2]'
+            xpath = ".//main/div/div[3]/button[2]"
             deny = base_element.find_element(By.XPATH, xpath)
             deny.click()
             return "POPUP: Denied buying more superlikes"
@@ -423,7 +464,7 @@ class Session:
 
         # try to say 'no thanks' to buy more (super)likes
         try:
-            xpath = './/main/div/div[3]/button[2]'
+            xpath = ".//main/div/div[3]/button[2]"
             deny_btn = base_element.find_element(By.XPATH, xpath)
             deny_btn.click()
             return "POPUP: Denied buying more superlikes"
@@ -440,7 +481,7 @@ class Session:
 
         # Deny confirmation of email
         try:
-            xpath = './/main/div/div[1]/div[2]/button[2]'
+            xpath = ".//main/div/div[1]/div[2]/button[2]"
             remindmelater = base_element.find_element(By.XPATH, xpath)
             remindmelater.click()
 
@@ -467,15 +508,15 @@ class Session:
 
     def _is_logged_in(self):
         # make sure tinder website is loaded for the first time
-        if not "tinder" in self.browser.current_url:
+        if "tinder" not in self.browser.current_url:
             # enforce english language
             self.browser.get("https://tinder.com/?lang=en")
             time.sleep(1.5)
 
+        logger.trace(f"current url: {self.browser.current_url}")
         if "tinder.com/app/" in self.browser.current_url:
             return True
         else:
-            print("User is not logged in yet.\n")
             return False
 
     def _get_msg_box(self, lines, indent=1, width=None, title=None):
@@ -485,21 +526,26 @@ class Session:
             width = max(map(len, lines))
         box = f'/{"=" * (width + indent * 2)}\\\n'  # upper_border
         if title:
-            box += f'|{space}{title:<{width}}{space}|\n'  # title
+            box += f"|{space}{title:<{width}}{space}|\n"  # title
             box += f'|{space}{"-" * len(title):<{width}}{space}|\n'  # underscore
-        box += ''.join([f'|{space}{line:<{width}}{space}|\n' for line in lines])
+        box += "".join([f"|{space}{line:<{width}}{space}|\n" for line in lines])
         box += f'\\{"=" * (width + indent * 2)}/'  # lower_border
         return box
 
     def _print_liked_stats(self):
-        likes = self.session_data['like']
-        dislikes = self.session_data['dislike']
-        superlikes = self.session_data['superlike']
+        likes = self.session_data["like"]
+        dislikes = self.session_data["dislike"]
+        superlikes = self.session_data["superlike"]
 
         if superlikes > 0:
-            print(f"You've superliked {self.session_data['superlike']} profiles during this session.")
+            print(
+                f"You've superliked {self.session_data['superlike']} profiles during this session."
+            )
         if likes > 0:
-            print(f"You've liked {self.session_data['like']} profiles during this session.")
+            print(
+                f"You've liked {self.session_data['like']} profiles during this session."
+            )
         if dislikes > 0:
-            print(f"You've disliked {self.session_data['dislike']} profiles during this session.")
-
+            print(
+                f"You've disliked {self.session_data['dislike']} profiles during this session."
+            )

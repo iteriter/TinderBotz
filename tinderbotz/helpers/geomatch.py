@@ -1,8 +1,26 @@
 from tinderbotz.helpers.storage_helper import StorageHelper
 
+
 class Geomatch:
 
-    def __init__(self, name, age, work, study, home, gender, bio, lifestyle, basics, anthem, looking_for = None, distance = None, passions = None, image_urls = None, instagram = None):
+    def __init__(
+        self,
+        name,
+        age=None,
+        work=None,
+        study=None,
+        home=None,
+        gender=None,
+        bio=None,
+        lifestyle=None,
+        basics=None,
+        anthem=None,
+        looking_for=None,
+        distance=None,
+        passions=None,
+        image_urls=None,
+        instagram=None,
+    ):
         self.name = name
         self.age = age
         self.work = work
@@ -37,6 +55,7 @@ class Geomatch:
         import requests
         import cv2
         import numpy as np
+
         resp = requests.get(image_url, stream=True).raw
         image = np.asarray(bytearray(resp.read()), dtype="uint8")
         image = cv2.imdecode(image, cv2.IMREAD_COLOR)
@@ -74,7 +93,7 @@ class Geomatch:
 
     def get_anthem(self):
         return self.anthem
-    
+
     def get_looking_for(self):
         return self.looking_for
 
